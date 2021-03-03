@@ -15,8 +15,7 @@ require('dotenv').config();
 router.get('/', (request, response) => {
     if (request.query.id) {
         db.User.findOne({
-            where: { id: request.query.id },
-            attributes: ["id", "userName", "portrait", "createdAt"]
+            where: { id: request.query.id }
         }).then((result) => {
             console.log(`findUserById: `, result);
             return response.json(result);
@@ -56,7 +55,8 @@ router.post('/', ({ body }, response) => {
         lastName: body.lastName,
         userName: body.username,
         email: body.email,
-        password: body.password
+        password: body.password,
+        bio: body.bio
     }).then((result) => {
         response.json(result);
     }).catch((err) => {
@@ -64,9 +64,9 @@ router.post('/', ({ body }, response) => {
     });
 });
 
-router.put('/',authenticate, ({ body }, response) => {
+router.put('/', authenticate, (request, response) => {
 
-    if (profanityCheck(body.firstName + ' ' + body.lastName + ' ' + body.username)) {
+    if (profanityCheck(request.body.firstName + ' ' + request.body.lastName + ' ' + request.body.username)) {
         response.status(400).json({
             err: 'User contains disallowed term/phrase.'
         });
@@ -74,13 +74,14 @@ router.put('/',authenticate, ({ body }, response) => {
     }
 
     db.User.update({
-        username: body.username,
-        firstName: body.firstName,
-        lastName: body.lastName,
-        email: body.email,
-        password: body.password
+        username: request.body.username,
+        firstName: request.body.firstName,
+        lastName: request.body.lastName,
+        email: request.body.email,
+        password: request.body.password,
+        bio: request.body.bio
     }, {
-        where: { id: body.userId }
+        where: { id: request.userId }
     }).then((result) => {
         response.json(result);
     }).catch((err) => {
@@ -102,11 +103,24 @@ router.delete('/:id', authenticate,  (request, response) => {
 
 // ===================================================
 
-router.post("/signup", (req, res) => {
-    if (profanityCheck(req.body.firstName + ' ' + req.body.lastName + ' ' + req.body.username)) {
-        response.status(400).json({
-            err: 'User contains disallowed term/phrase.'
-        });
+router.post("/signup", async (req, res) => {
+    if (profanityCheck(req.body.username)) {
+        res.statusMessage = 'Username contains disallowed term/phrase.';
+        res.status(400).end();
+        return;
+    }
+
+    const checkUsername = await db.User.findOne({ where: { userName: req.body.userName } });
+    if (checkUsername) {
+        res.statusMessage = 'Username already in use.';
+        res.status(400).end();
+        return;
+    }
+
+    const checkEmail = await db.User.findOne({ where: { email: req.body.email } });
+    if (checkEmail) {
+        res.statusMessage ='Email already in use.';
+        res.status(400).end();
         return;
     }
 
@@ -117,10 +131,14 @@ router.post("/signup", (req, res) => {
             lastName: user.lastName,
             userName: user.userName,            
             isProfessional: user.isProfessional,
+            portrait: user.portrait,
+            bio: user.bio,
             id: user.id
         }, process.env.JWT_SECRET);
         console.log(token);
         res.json({ token, user })
+    }).catch( (err) => {
+        res.status(400).json(err);
     })
 });
 
@@ -139,6 +157,7 @@ router.post("/signin", (req, res) => {
                     userName: user.userName,
                     isProfessional: user.isProfessional,
                     portrait: user.portrait,
+                    bio: user.bio,
                     id: user.id
                 }, process.env.JWT_SECRET)
                 res.json({ token, user })
@@ -175,7 +194,7 @@ router.post("/portrait", authenticate, async (request, response) => {
         const uploadedResponse = await cloudinary.uploader.upload(file);
 
         db.User.update({portrait: uploadedResponse.public_id}, {where:{id: request.userId}}).then(data => {
-            response.json(data)
+            response.json({id: uploadedResponse.public_id})
         }).catch(err => {
             console.log(err);
             response.status(500).json(err);
