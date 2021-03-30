@@ -18,13 +18,13 @@ router.get('/', authenticate, (request, response) => {
             as: 'user2',
             where: { id: { [Op.ne]: request.userId } },
             required: false,
-            attributes: ['id', 'userName', 'firstName', 'lastName']
+            attributes: ['id', 'userName', 'firstName', 'lastName', 'portrait']
         }, {
             model: db.User,
             as: 'user1',
                 where: { id: { [Op.ne]: request.userId } },
             required: false,
-            attributes: ['id', 'userName', 'firstName', 'lastName']
+            attributes: ['id', 'userName', 'firstName', 'lastName', 'portrait']
         }],
         order: [['updatedAt', 'DESC']] // Will order threads by most recently messaged
     }).then( (result) => {
@@ -55,14 +55,18 @@ router.post('/', authenticate, async (request, response) => {
         }
     }).then( (result) => {
         if (result) {
-            response.json('Thread already exists');
+            response.json({
+                thread: result.dataValues,
+                user: user2,
+                isNewRecord: false
+            });
         } else { // If thread doesn't exist, create it
             console.log(`Creating thread b/w user ${request.userId} and user ${user2.id}`)
             db.Thread.create({
                 user1Id: request.userId,
                 user2Id: user2.id
             }).then( (result) => {
-                response.json({thread: result, user: user2});
+                response.json({ thread: result, user: user2, isNewRecord: true });
             }).catch( (err) => {
                 response.status(500).json(err);
             });
