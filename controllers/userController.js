@@ -105,19 +105,19 @@ router.post("/signup", async (req, res) => {
         return;
     }
 
-    const checkUsername = await db.User.findOne({ where: { userName: req.body.userName } });
-    if (checkUsername) {
-        res.statusMessage = 'Username already in use.';
-        res.status(400).end();
-        return;
-    }
+    // const checkUsername = await db.User.findOne({ where: { userName: req.body.userName } });
+    // if (checkUsername) {
+    //     res.statusMessage = 'Username already in use.';
+    //     res.status(400).end();
+    //     return;
+    // }
 
-    const checkEmail = await db.User.findOne({ where: { email: req.body.email } });
-    if (checkEmail) {
-        res.statusMessage ='Email already in use.';
-        res.status(400).end();
-        return;
-    }
+    // const checkEmail = await db.User.findOne({ where: { email: req.body.email } });
+    // if (checkEmail) {
+    //     res.statusMessage ='Email already in use.';
+    //     res.status(400).end();
+    //     return;
+    // }
 
     db.User.create(req.body).then(user => {
         const token = jwt.sign({
