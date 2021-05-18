@@ -9,7 +9,6 @@ const cloudinary = require("cloudinary");
 
 const { Op } = require('sequelize');
 const { Sequelize } = require('../models');
-const { request } = require('express');
 
 require('dotenv').config();
 
@@ -105,19 +104,19 @@ router.post("/signup", async (req, res) => {
         return;
     }
 
-    // const checkUsername = await db.User.findOne({ where: { userName: req.body.userName } });
-    // if (checkUsername) {
-    //     res.statusMessage = 'Username already in use.';
-    //     res.status(400).end();
-    //     return;
-    // }
+    const checkUsername = await db.User.findOne({ where: { userName: req.body.userName } });
+    if (checkUsername) {
+        res.statusMessage = 'Username already in use.';
+        res.status(400).end();
+        return;
+    }
 
-    // const checkEmail = await db.User.findOne({ where: { email: req.body.email } });
-    // if (checkEmail) {
-    //     res.statusMessage ='Email already in use.';
-    //     res.status(400).end();
-    //     return;
-    // }
+    const checkEmail = await db.User.findOne({ where: { email: req.body.email } });
+    if (checkEmail) {
+        res.statusMessage ='Email already in use.';
+        res.status(400).end();
+        return;
+    }
 
     db.User.create(req.body).then(user => {
         const token = jwt.sign({
@@ -217,42 +216,6 @@ router.get("/authenticate", (req, res) => {
         }
     })
 
-});
-
-router.get('/related', (req, res) => {
-    const includes = [{
-        model: db.Tag,
-        where: { name: { [Op.in]: req.query.tags.split(',') } },
-        through: { attributes: [] }
-    }];
-    
-    db.User.findAll({
-        where: {
-            username: { [Op.ne]: req.query.username }
-        },
-        include: includes 
-    }).then( (findResult) => {
-        res.json(findResult);
-    }).catch( (err) => {
-        res.status(500).json(err);
-    });
-});
-
-router.get('/feed', async (req, res) => {
-    const userInclude = {
-        model: db.User,
-        where: { id: req.query.user }
-    }
-
-    let [ services, questions, answers, comments, ratings ] = await Promise.all([
-        db.Service  .findAll({ include: userInclude }),
-        db.Question .findAll({ include: userInclude }),
-        db.Answer   .findAll({ include: userInclude }),
-        db.Comment  .findAll({ include: userInclude }),
-        db.Rating   .findAll({ where: { UserId: req.query.user } })
-    ]);
-
-    res.json({ services, questions, answers, comments, ratings });
 });
 
 module.exports = router;
